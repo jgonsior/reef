@@ -1,39 +1,50 @@
 #!/usr/bin/env python
 # coding: utf-8
 from pprint import pprint
-# In[1]:
-
-#  get_ipython().run_line_magic('load_ext', 'autoreload')
-#  get_ipython().run_line_magic('autoreload', '2')
-
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-#  get_ipython().run_line_magic('matplotlib', 'inline')
+import sys
+import random
 
-import warnings
-warnings.filterwarnings("ignore")
+parser = argparse.ArgumentParser()
 
-# # Load Dataset
-# For this tutorial, we will use a IMDb dataset with plots and associated genres. We define our task as classifying the plots as those of action or romance movies based only on the plot text.
-#
-# The data is in `data/imdb/budgetandactors.txt`, which contains the plot and genre information about movies from the IMDb database. We pre-process the data below to generate the following:
-# * Featurize the plot text using bag-of-words representation
-# * Split the dataset into train, val, and test
-#
-# **TODO: Featurize in loader and load in the words each feature represents**
+# folder data/$data_set/{train,test,validation}.csv?
+# create small script data/$data_set/splitData.py !!
+# create dataset deco_small, deco_full
+parser.add_argument('--data_set', required=True)
+parser.add_argument(
+    '--strategy',
+    required=True,
+    help="Possible Values: uncertainty|random|committee|boundary")
+parser.add_argument('--nLearningIterations', type=int, default=15)
+parser.add_argument('--nQueriesPerIteration', type=int, default=150)
+parser.add_argument('--plot', action='store_true')
+parser.add_argument('--mergedLabels', action='store_true')
+parser.add_argument('--output', default="results/default")
+parser.add_argument('--cores', type=int, default=1)
+parser.add_argument('--start_size', type=float)
+parser.add_argument('--random_seed', type=int, default=23)
 
-# In[2]:
+config = parser.parse_args()
+
+if len(sys.argv[:-1]) == 0:
+    parser.print_help()
+    parser.exit()
+
+np.random.seed(config.random_seed)
+random.seed(config.random_seed)
 
 dataset = 'imdb'
 
 from data.loader import DataLoader
 dl = DataLoader()
 train_primitive_matrix, val_primitive_matrix, test_primitive_matrix, train_ground, val_ground, test_ground, _, _, _ = dl.load_data(
-    dataset=dataset)
+    data_path='./data/imdb/budgetandactors.txt')
 
 pprint(train_primitive_matrix)
 
-#  exit(-3)
+exit(-3)
 # # Reef Steps
 # Reef generates heuristics in an iterative manner, with each iteration consisting of the following steps:
 # 1. Synthesize Heuristics

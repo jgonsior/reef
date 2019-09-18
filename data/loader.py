@@ -79,9 +79,10 @@ class DataLoader(object):
 
         return common_idx
 
-    def load_data(self, dataset, data_path='./data/imdb/'):
+    def load_data(self, data_path):
+
         #Parse Files
-        plots, labels = parse_file(data_path + 'budgetandactors.txt')
+        plots, labels = parse_file(data_path)
         #read_plots('imdb_plots.tsv')
 
         #Featurize Plots
