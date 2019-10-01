@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 
 # folder data/$data_set/{train,test,validation}.csv?
 # create small script data/$data_set/splitData.py !!
-# create dataset deco_small, deco_full
+# create dataset deco_small, deco_full -> recheck why I have only 40 featuren instead of 159! was it the result of feature selection? kBest 40?
 parser.add_argument('--data_set', required=True)
 parser.add_argument(
     '--strategy',
