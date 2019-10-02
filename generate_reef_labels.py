@@ -1,12 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
-from pprint import pprint
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
-import sys
 import random
+import sys
+from pprint import pprint
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+
+import deco_helper.functions
+from data.loader import DataLoader
+from program_synthesis.heuristic_generator import HeuristicGenerator
+from program_synthesis.synthesizer import Synthesizer
+from program_synthesis.verifier import Verifier
+
 parser = argparse.ArgumentParser()
 
 # folder data/$data_set/{train,test,validation}.csv?
@@ -35,7 +43,6 @@ train = pd.read_csv(config.dataset_path + '/6_train.csv')
 test = pd.read_csv(config.dataset_path + '/6_test.csv')
 val = pd.read_csv(config.dataset_path + '/6_val.csv')
 
-from data.loader import DataLoader
 dl = DataLoader()
 X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
     data_path='./data/imdb/budgetandactors.txt')
@@ -61,8 +68,6 @@ exit(-3)
 
 # In[3]:
 
-from program_synthesis.heuristic_generator import HeuristicGenerator
-
 hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=0.5)
 hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
@@ -73,7 +78,6 @@ hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
 # In[4]:
 
-from program_synthesis.synthesizer import Synthesizer
 syn = Synthesizer(X_val, Y_val, b=0.5)
 
 heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
@@ -103,7 +107,6 @@ print('Features chosen heuristics are based on: ', top_idx)
 
 # In[7]:
 
-from program_synthesis.verifier import Verifier
 verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
 
 verifier.train_gen_model()
