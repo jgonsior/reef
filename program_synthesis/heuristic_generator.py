@@ -1,7 +1,9 @@
+from pprint import pprint
+
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
-from pprint import pprint
+
 from program_synthesis.synthesizer import Synthesizer
 from program_synthesis.verifier import Verifier
 
@@ -48,9 +50,9 @@ class HeuristicGenerator(object):
 
         L = np.zeros((np.shape(primitive_matrix)[0], len(heuristics)))
         for i, hf in enumerate(heuristics):
-            L[:, i] = marginals_to_labels(hf,
-                                          primitive_matrix[:, feat_combos[i]],
-                                          beta_opt[i])
+            L[:, i] = marginals_to_labels(
+                hf, primitive_matrix.iloc[:, list(feat_combos[i])],
+                beta_opt[i])
         return L
 
     def prune_heuristics(self, heuristics, feat_combos, keep=1):
@@ -128,7 +130,7 @@ class HeuristicGenerator(object):
             primitive_matrix = self.X_val
             ground = self.Y_val
         else:
-            primitive_matrix = self.X_val[idx, :]
+            primitive_matrix = self.X_val.iloc[idx, :]
             ground = self.Y_val[idx]
 
         #Generate all possible heuristics

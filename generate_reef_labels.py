@@ -39,6 +39,10 @@ if len(sys.argv[:-1]) == 0:
 np.random.seed(config.random_seed)
 random.seed(config.random_seed)
 
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+warnings.filterwarnings(action='ignore', category=UndefinedMetricWarning)
+
 train = pd.read_csv(config.dataset_path + '/6_train.csv')
 test = pd.read_csv(config.dataset_path + '/6_test.csv')
 val = pd.read_csv(config.dataset_path + '/6_val.csv')
@@ -209,5 +213,5 @@ print("Program Synthesis Validation Accuracy: ", validation_accuracy[-1])
 
 # In[14]:
 
-filepath = './data/' + dataset
+filepath = './data/'
 np.save(filepath + '_reef.npy', training_marginals[-1])
