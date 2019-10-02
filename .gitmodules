@@ -1,0 +1,3 @@
+[submodule "deco-helper"]
+	path = deco-helper
+	url = git@github.com:jgonsior/deco-helper.git

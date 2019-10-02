@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 import json
 from sklearn.model_selection import train_test_split
-
+from pprint import pprint
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -91,7 +91,7 @@ class DataLoader(object):
         X = vectorizer.fit_transform(plots)
         valid_feats = np.where(np.sum(X, 0) > 2)[1]
         X = X[:, valid_feats]
-
+        pprint(X)
         #Split Dataset into Train, Val, Test
         train_primitive_matrix, val_primitive_matrix, test_primitive_matrix, \
             train_ground, val_ground, test_ground, \

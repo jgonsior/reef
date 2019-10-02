@@ -6,17 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import random
-
+import pandas as pd
 parser = argparse.ArgumentParser()
 
 # folder data/$data_set/{train,test,validation}.csv?
 # create small script data/$data_set/splitData.py !!
 # create dataset deco_small, deco_full -> recheck why I have only 40 featuren instead of 159! was it the result of feature selection? kBest 40?
-parser.add_argument('--data_set', required=True)
-parser.add_argument(
-    '--strategy',
-    required=True,
-    help="Possible Values: uncertainty|random|committee|boundary")
+parser.add_argument('--dataset_path', required=True)
 parser.add_argument('--nLearningIterations', type=int, default=15)
 parser.add_argument('--nQueriesPerIteration', type=int, default=150)
 parser.add_argument('--plot', action='store_true')
@@ -35,14 +31,18 @@ if len(sys.argv[:-1]) == 0:
 np.random.seed(config.random_seed)
 random.seed(config.random_seed)
 
-dataset = 'imdb'
+train = pd.read_csv(config.dataset_path + '/6_train.csv')
+test = pd.read_csv(config.dataset_path + '/6_test.csv')
+val = pd.read_csv(config.dataset_path + '/6_val.csv')
 
 from data.loader import DataLoader
 dl = DataLoader()
-train_primitive_matrix, val_primitive_matrix, test_primitive_matrix, train_ground, val_ground, test_ground, _, _, _ = dl.load_data(
+X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
     data_path='./data/imdb/budgetandactors.txt')
 
-pprint(train_primitive_matrix)
+# X_train, X_val, X_test = ground
+
+pprint(X_train)
 
 exit(-3)
 # # Reef Steps
@@ -63,11 +63,7 @@ exit(-3)
 
 from program_synthesis.heuristic_generator import HeuristicGenerator
 
-hg = HeuristicGenerator(train_primitive_matrix,
-                        val_primitive_matrix,
-                        val_ground,
-                        train_ground,
-                        b=0.5)
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=0.5)
 hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
 # ## 1. Synthesize Heuristics
@@ -78,7 +74,7 @@ hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 # In[4]:
 
 from program_synthesis.synthesizer import Synthesizer
-syn = Synthesizer(val_primitive_matrix, val_ground, b=0.5)
+syn = Synthesizer(X_val, Y_val, b=0.5)
 
 heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
 print("Total Heuristics Generated: ", np.shape(heuristics)[1])
@@ -87,8 +83,8 @@ print("Total Heuristics Generated: ", np.shape(heuristics)[1])
 
 # In[5]:
 
-optimal_betas = syn.find_optimal_beta(heuristics[0], val_primitive_matrix,
-                                      feature_inputs[0], val_ground)
+optimal_betas = syn.find_optimal_beta(heuristics[0], X_val, feature_inputs[0],
+                                      Y_val)
 plt.hist(optimal_betas, range=(0, 0.5))
 plt.xlabel('Beta Values')
 
@@ -108,7 +104,7 @@ print('Features chosen heuristics are based on: ', top_idx)
 # In[7]:
 
 from program_synthesis.verifier import Verifier
-verifier = Verifier(hg.L_train, hg.L_val, val_ground, has_snorkel=False)
+verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
 
 verifier.train_gen_model()
 verifier.assign_marginals()
@@ -128,7 +124,7 @@ plt.hist(verifier.val_marginals)
 plt.title('Validation Set Probabilistic Labels')
 feedback_idx = verifier.find_vague_points(gamma=0.1, b=0.5)
 print('Percentage of Low Confidence Points: ',
-      np.shape(feedback_idx)[0] / float(np.shape(val_ground)[0]))
+      np.shape(feedback_idx)[0] / float(np.shape(Y_val)[0]))
 
 # ## 4. Repeat Iterative Process of Generating Heuristics
 # We repeat this process of synthesizing, pruning, and verifying heuristics iteratively. In this example, we generate 25 total heuristics.
@@ -145,11 +141,7 @@ training_coverage = []
 training_marginals = []
 idx = None
 
-hg = HeuristicGenerator(train_primitive_matrix,
-                        val_primitive_matrix,
-                        val_ground,
-                        train_ground,
-                        b=0.5)
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=0.5)
 plt.figure(figsize=(12, 6))
 for i in range(3, 26):
     if (i - 2) % 5 == 0:
