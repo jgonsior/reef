@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import deco_helper.functions
+from deco_helper.functions import splitFeatures
 from data.loader import DataLoader
 from program_synthesis.heuristic_generator import HeuristicGenerator
 from program_synthesis.synthesizer import Synthesizer
@@ -43,15 +43,24 @@ train = pd.read_csv(config.dataset_path + '/6_train.csv')
 test = pd.read_csv(config.dataset_path + '/6_test.csv')
 val = pd.read_csv(config.dataset_path + '/6_val.csv')
 
-dl = DataLoader()
-X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
-    data_path='./data/imdb/budgetandactors.txt')
+X_train, meta_train, Y_train, label_encoder_train = splitFeatures(train)
+X_test, meta_test, Y_test, label_encoder_test = splitFeatures(test)
+X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
+# features, meta NOT features, label!
 
-# X_train, X_val, X_test = ground
+#  dl = DataLoader()
+#  X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
+#  data_path='./data/imdb/budgetandactors.txt')
 
-pprint(X_train)
+#  pprint(X_train)
+#  pprint(Y_train)
 
-exit(-3)
+#  pprint(X_test)
+#  pprint(Y_test)
+
+#  pprint(X_val)
+#  pprint(Y_val)
+#  exit(-3)
 # # Reef Steps
 # Reef generates heuristics in an iterative manner, with each iteration consisting of the following steps:
 # 1. Synthesize Heuristics
@@ -68,7 +77,7 @@ exit(-3)
 
 # In[3]:
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=0.5)
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / 6)
 hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
 # ## 1. Synthesize Heuristics
