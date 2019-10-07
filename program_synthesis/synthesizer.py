@@ -11,7 +11,6 @@ class Synthesizer(object):
     """
     A class to synthesize heuristics from primitives and validation labels
     """
-
     def __init__(self, primitive_matrix, val_ground, b=0.5):
         """ 
         Initialize Synthesizer object
@@ -89,7 +88,8 @@ class Synthesizer(object):
 
         return heuristics_final, feature_combinations_final
 
-    def beta_optimizer(self, marginals, ground):
+    def beta_optimizer(self, highest_probabilities, most_likely_labels,
+                       ground):
         """ 
         Returns the best beta parameter for abstain threshold given marginals
         Uses F1 score that maximizes the F1 score
@@ -99,19 +99,25 @@ class Synthesizer(object):
 
         #Set the range of beta params
         #0.25 instead of 0.0 as a min makes controls coverage better
-        beta_params = np.linspace(0.0, self.b, 10)
+        beta_params = np.linspace(self.b, 1, 10)
 
         f1 = []
 
         for beta in beta_params:
-            labels_cutoff = np.zeros(np.shape(marginals))
-            labels_cutoff[marginals <= (self.b - beta)] = -1.
-            labels_cutoff[marginals >= (self.b + beta)] = 1.
-            # -> hier wird doch gerade nur ein binäres Label erzeugt/erzwingt!
+            labels_cutoff = np.zeros(np.shape(highest_probabilities))
+            for i, (highest_probability, most_likely_label) in enumerate(
+                    zip(highest_probabilities, most_likely_labels)):
+                if highest_probability > beta:
+                    labels_cutoff[i] = most_likely_label
+            print("Beta: " + str(beta))
+            #  labels_cutoff[marginals <= (self.b - beta)] = -1.
+            #  labels_cutoff[marginals >= (self.b + beta)] = 1.
             f1.append(f1_score(ground, labels_cutoff, average='weighted'))
 
+        pprint(f1)
         f1 = np.nan_to_num(f1)
-        return beta_params[np.argsort(np.array(f1))[-1]]
+        optimal_beta = beta_params[np.argsort(np.array(f1))[-1]]
+        return optimal_beta
 
     def find_optimal_beta(self, heuristics, X, feat_combos, ground):
         """ 
@@ -124,7 +130,11 @@ class Synthesizer(object):
         """
         beta_opt = []
         for i, hf in enumerate(heuristics):
-            marginals = hf.predict_proba(X.iloc[:, list(feat_combos[i])])[:, 1]
-            labels_cutoff = np.zeros(np.shape(marginals))
-            beta_opt.append((self.beta_optimizer(marginals, ground)))
+            probas = hf.predict_proba(X.iloc[:, list(feat_combos[i])])
+            pprint(probas)
+            highest_probabilities = np.amax(probas, axis=1)
+            most_likely_labels = np.argmax(probas, axis=1)
+            print("\n" * 5)
+            beta_opt.append((self.beta_optimizer(highest_probabilities,
+                                                 most_likely_labels, ground)))
         return beta_opt

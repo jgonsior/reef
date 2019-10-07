@@ -87,7 +87,7 @@ amount_of_labels = max(len(label_encoder_val.classes_),
 # In[3]:
 
 hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
-hg.run_synthesizer(max_cardinality=3, idx=None, keep=3, model='dt')
+hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
 # ## 1. Synthesize Heuristics
 # We start by generating all possible heuristics based on the labeled, validation set that take in a single feature (i.e. word for this example) as input.
