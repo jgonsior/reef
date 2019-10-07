@@ -11,6 +11,7 @@ class Synthesizer(object):
     """
     A class to synthesize heuristics from primitives and validation labels
     """
+
     def __init__(self, primitive_matrix, val_ground, b=0.5):
         """ 
         Initialize Synthesizer object
@@ -80,7 +81,7 @@ class Synthesizer(object):
             feature_combinations = self.generate_feature_combinations(
                 cardinality)
             heuristics = []
-            for i, comb in enumerate(feature_combinations):
+            for _, comb in enumerate(feature_combinations):
                 heuristics.append(self.fit_function(comb, model))
 
             feature_combinations_final.append(feature_combinations)
@@ -98,7 +99,7 @@ class Synthesizer(object):
 
         #Set the range of beta params
         #0.25 instead of 0.0 as a min makes controls coverage better
-        beta_params = np.linspace(0.25, 0.45, 10)
+        beta_params = np.linspace(0.0, self.b, 10)
 
         f1 = []
 
@@ -106,6 +107,7 @@ class Synthesizer(object):
             labels_cutoff = np.zeros(np.shape(marginals))
             labels_cutoff[marginals <= (self.b - beta)] = -1.
             labels_cutoff[marginals >= (self.b + beta)] = 1.
+            # -> hier wird doch gerade nur ein binäres Label erzeugt/erzwingt!
             f1.append(f1_score(ground, labels_cutoff, average='weighted'))
 
         f1 = np.nan_to_num(f1)

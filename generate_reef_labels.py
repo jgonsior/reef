@@ -50,6 +50,10 @@ val = pd.read_csv(config.dataset_path + '/6_val.csv')
 X_train, meta_train, Y_train, label_encoder_train = splitFeatures(train)
 X_test, meta_test, Y_test, label_encoder_test = splitFeatures(test)
 X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
+
+amount_of_labels = max(len(label_encoder_val.classes_),
+                       len(label_encoder_test.classes_),
+                       len(label_encoder_train.classes_))
 # features, meta NOT features, label!
 
 #  dl = DataLoader()
@@ -65,6 +69,7 @@ X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
 #  pprint(X_val)
 #  pprint(Y_val)
 #  exit(-3)
+
 # # Reef Steps
 # Reef generates heuristics in an iterative manner, with each iteration consisting of the following steps:
 # 1. Synthesize Heuristics
@@ -81,8 +86,8 @@ X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
 
 # In[3]:
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / 6)
-hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
+hg.run_synthesizer(max_cardinality=3, idx=None, keep=3, model='dt')
 
 # ## 1. Synthesize Heuristics
 # We start by generating all possible heuristics based on the labeled, validation set that take in a single feature (i.e. word for this example) as input.
