@@ -1,10 +1,13 @@
-import numpy as np
 import itertools
 from pprint import pprint
-from sklearn.metrics import f1_score
+
+import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import f1_score
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+from program_synthesis.functions import get_labels_cutoff
 
 
 class Synthesizer(object):
@@ -88,8 +91,7 @@ class Synthesizer(object):
 
         return heuristics_final, feature_combinations_final
 
-    def beta_optimizer(self, highest_probabilities, most_likely_labels,
-                       ground):
+    def beta_optimizer(self, marginals, ground):
         """ 
         Returns the best beta parameter for abstain threshold given marginals
         Uses F1 score that maximizes the F1 score
@@ -101,20 +103,15 @@ class Synthesizer(object):
         #0.25 instead of 0.0 as a min makes controls coverage better
         beta_params = np.linspace(self.b, 1, 10)
 
+        highest_probabilities = np.amax(marginals, axis=1)
+        most_likely_labels = np.argmax(marginals, axis=1)
         f1 = []
 
         for beta in beta_params:
-            labels_cutoff = np.zeros(np.shape(highest_probabilities))
-            for i, (highest_probability, most_likely_label) in enumerate(
-                    zip(highest_probabilities, most_likely_labels)):
-                if highest_probability > beta:
-                    labels_cutoff[i] = most_likely_label
-            print("Beta: " + str(beta))
-            #  labels_cutoff[marginals <= (self.b - beta)] = -1.
-            #  labels_cutoff[marginals >= (self.b + beta)] = 1.
+            labels_cutoff = get_labels_cutoff(highest_probabilities,
+                                              most_likely_labels, beta)
             f1.append(f1_score(ground, labels_cutoff, average='weighted'))
 
-        pprint(f1)
         f1 = np.nan_to_num(f1)
         optimal_beta = beta_params[np.argsort(np.array(f1))[-1]]
         return optimal_beta
@@ -130,11 +127,7 @@ class Synthesizer(object):
         """
         beta_opt = []
         for i, hf in enumerate(heuristics):
-            probas = hf.predict_proba(X.iloc[:, list(feat_combos[i])])
-            pprint(probas)
-            highest_probabilities = np.amax(probas, axis=1)
-            most_likely_labels = np.argmax(probas, axis=1)
-            print("\n" * 5)
-            beta_opt.append((self.beta_optimizer(highest_probabilities,
-                                                 most_likely_labels, ground)))
+            marginals = hf.predict_proba(X.iloc[:, list(feat_combos[i])])
+            beta_opt.append((self.beta_optimizer(marginals, ground)))
+
         return beta_opt

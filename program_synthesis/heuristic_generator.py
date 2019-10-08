@@ -6,6 +6,7 @@ from sklearn.metrics import f1_score
 
 from program_synthesis.synthesizer import Synthesizer
 from program_synthesis.verifier import Verifier
+from program_synthesis.functions import marginals_to_labels
 
 
 class HeuristicGenerator(object):
@@ -41,12 +42,6 @@ class HeuristicGenerator(object):
         feat_combos: primitive indices to apply heuristics to
         beta: best beta value for associated heuristics
         """
-        def marginals_to_labels(hf, X, beta):
-            marginals = hf.predict_proba(X)[:, 1]
-            labels_cutoff = np.zeros(np.shape(marginals))
-            labels_cutoff[marginals <= (self.b - beta)] = -1.
-            labels_cutoff[marginals >= (self.b + beta)] = 1.
-            return labels_cutoff
 
         L = np.zeros((np.shape(primitive_matrix)[0], len(heuristics)))
         for i, hf in enumerate(heuristics):
@@ -205,6 +200,9 @@ class HeuristicGenerator(object):
             set(list(np.concatenate((vague_idx, incorrect_idx)))))
 
     def evaluate(self):
+        print("\n" * 5)
+        print("EVA")
+        print("\n" * 5)
         """ 
         Calculate the accuracy and coverage for train and validation sets
         """
@@ -212,8 +210,12 @@ class HeuristicGenerator(object):
         self.train_marginals = self.vf.train_marginals
 
         def calculate_accuracy(marginals, b, ground):
+            pprint(marginals)
+            pprint(b)
+            pprint(ground)
             total = np.shape(np.where(marginals != 0.5))[1]
             labels = np.sign(2 * (marginals - 0.5))
+            exit(-23)
             return np.sum(labels == ground) / float(total)
 
         def calculate_coverage(marginals, b, ground):

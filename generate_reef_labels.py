@@ -3,14 +3,16 @@
 import argparse
 import random
 import sys
+import warnings
 from pprint import pprint
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.exceptions import UndefinedMetricWarning
 
-from deco_helper.functions import splitFeatures
 from data.loader import DataLoader
+from deco_helper.functions import splitFeatures
 from program_synthesis.heuristic_generator import HeuristicGenerator
 from program_synthesis.synthesizer import Synthesizer
 from program_synthesis.verifier import Verifier
@@ -39,8 +41,6 @@ if len(sys.argv[:-1]) == 0:
 np.random.seed(config.random_seed)
 random.seed(config.random_seed)
 
-import warnings
-from sklearn.exceptions import UndefinedMetricWarning
 warnings.filterwarnings(action='ignore', category=UndefinedMetricWarning)
 
 train = pd.read_csv(config.dataset_path + '/6_train.csv')
@@ -88,6 +88,7 @@ amount_of_labels = max(len(label_encoder_val.classes_),
 
 hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
 hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
+pprint(hg.heuristic_stats())
 
 # ## 1. Synthesize Heuristics
 # We start by generating all possible heuristics based on the labeled, validation set that take in a single feature (i.e. word for this example) as input.
@@ -96,7 +97,7 @@ hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
 
 # In[4]:
 
-syn = Synthesizer(X_val, Y_val, b=0.5)
+syn = Synthesizer(X_val, Y_val, b=1 / amount_of_labels)
 
 heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
 print("Total Heuristics Generated: ", np.shape(heuristics)[1])
@@ -107,9 +108,10 @@ print("Total Heuristics Generated: ", np.shape(heuristics)[1])
 
 optimal_betas = syn.find_optimal_beta(heuristics[0], X_val, feature_inputs[0],
                                       Y_val)
-plt.hist(optimal_betas, range=(0, 0.5))
+plt.hist(optimal_betas)
 plt.xlabel('Beta Values')
-
+#  plt.show()
+pprint(optimal_betas)
 # ## 2. Prune Heuristics
 # In the first iteration, we simply pick the 3 heuristics that perform the best on the labeled validation set.
 
@@ -125,11 +127,14 @@ print('Features chosen heuristics are based on: ', top_idx)
 
 # In[7]:
 
+#  ----> verwendet intern b -> muss als parameter übergeben werden und überprüft werden WIE b intern verwendet wird!
+pprint(hg.L_train)
+pprint(hg.L_val)
 verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
 
 verifier.train_gen_model()
+print("hui")
 verifier.assign_marginals()
-
 # We visualize what these labels look like. Note that with a single iteration, none of the datapoints receive a probabilistic label greater than 0.5, but this is fixed after running the process iteratively (Step 4). __These labels are then used to train an end model, such as an LSTM, and not used as final predictions.__
 
 # In[8]:
@@ -143,7 +148,7 @@ plt.title('Training Set Probabilistic Labels')
 
 plt.hist(verifier.val_marginals)
 plt.title('Validation Set Probabilistic Labels')
-feedback_idx = verifier.find_vague_points(gamma=0.1, b=0.5)
+feedback_idx = verifier.find_vague_points(gamma=0.1, b=1 / amount_of_labels)
 print('Percentage of Low Confidence Points: ',
       np.shape(feedback_idx)[0] / float(np.shape(Y_val)[0]))
 
@@ -162,7 +167,7 @@ training_coverage = []
 training_marginals = []
 idx = None
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=0.5)
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
 plt.figure(figsize=(12, 6))
 for i in range(3, 26):
     if (i - 2) % 5 == 0:
