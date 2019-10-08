@@ -210,9 +210,6 @@ class HeuristicGenerator(object):
         self.train_marginals = self.vf.train_marginals
 
         def calculate_accuracy(marginals, b, ground):
-            pprint(marginals)
-            pprint(b)
-            pprint(ground)
             total = np.shape(np.where(marginals != 0.5))[1]
             labels = np.sign(2 * (marginals - 0.5))
             exit(-23)

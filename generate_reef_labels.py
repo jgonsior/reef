@@ -87,7 +87,8 @@ amount_of_labels = max(len(label_encoder_val.classes_),
 # In[3]:
 
 hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
-hg.run_synthesizer(max_cardinality=1, idx=None, keep=3, model='dt')
+hg.run_synthesizer(max_cardinality=1, idx=None, keep=5, model='dt')
+print("Heuristics stats")
 pprint(hg.heuristic_stats())
 
 # ## 1. Synthesize Heuristics
@@ -111,6 +112,7 @@ optimal_betas = syn.find_optimal_beta(heuristics[0], X_val, feature_inputs[0],
 plt.hist(optimal_betas)
 plt.xlabel('Beta Values')
 #  plt.show()
+print("Optimal betas")
 pprint(optimal_betas)
 # ## 2. Prune Heuristics
 # In the first iteration, we simply pick the 3 heuristics that perform the best on the labeled validation set.
@@ -126,28 +128,39 @@ print('Features chosen heuristics are based on: ', top_idx)
 # In this step, we use the labels the heuristics assign to the **unlabeled train set** to estimate heuristic accuracies and assign probabilistic training labels to the same set accordingly (see [snorkel.stanford.edu](http://snorkel.stanford.edu) for more details).
 
 # In[7]:
-
-#  ----> verwendet intern b -> muss als parameter übergeben werden und überprüft werden WIE b intern verwendet wird!
+# hg.L_train enthält pro Trainingsdatenpunkt eine Liste mit den vorhergesagten Labels der einzelnen Heuristics
+# @todo: check if -1 is contained in there at least onece
+pprint(hg.L_train.shape)
 pprint(hg.L_train)
 pprint(hg.L_val)
+
+
+--> replace verifier with scikit naivebayes -> das lernt dann basierend auf den vorhergesagten labels! und output sind dann komplette marginals die weiterverwendet werden können
+-> wenn das gemacht ist -> ergebnisse von hier mit den imdb daten mit den daten aus dem original jupyter notebook vergleichen (aberals python skript ausgeführt)
+
 verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
 
 verifier.train_gen_model()
-print("hui")
 verifier.assign_marginals()
+
+print("Train marginals")
+pprint(verifier.train_marginals)
+print("Verifier marginals")
+pprint(verifier.val_marginals)
 # We visualize what these labels look like. Note that with a single iteration, none of the datapoints receive a probabilistic label greater than 0.5, but this is fixed after running the process iteratively (Step 4). __These labels are then used to train an end model, such as an LSTM, and not used as final predictions.__
 
 # In[8]:
-
+plt.clf()
 plt.hist(verifier.train_marginals)
 plt.title('Training Set Probabilistic Labels')
-
+#  plt.show()
 # Since we do not have access to ground truth labels for the train set, we use the distribution of labels for the labeled validation set to decide what feedback to pass to the synthesizer. We pass datapoints with low confidence (labels near 0.5, i.e. equal probability of being +1 or -1) to the synthesizer
 
 # In[9]:
-
+plt.clf()
 plt.hist(verifier.val_marginals)
 plt.title('Validation Set Probabilistic Labels')
+#  plt.show()
 feedback_idx = verifier.find_vague_points(gamma=0.1, b=1 / amount_of_labels)
 print('Percentage of Low Confidence Points: ',
       np.shape(feedback_idx)[0] / float(np.shape(Y_val)[0]))
