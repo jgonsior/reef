@@ -134,10 +134,6 @@ pprint(hg.L_train.shape)
 pprint(hg.L_train)
 pprint(hg.L_val)
 
-
---> replace verifier with scikit naivebayes -> das lernt dann basierend auf den vorhergesagten labels! und output sind dann komplette marginals die weiterverwendet werden können
--> wenn das gemacht ist -> ergebnisse von hier mit den imdb daten mit den daten aus dem original jupyter notebook vergleichen (aberals python skript ausgeführt)
-
 verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
 
 verifier.train_gen_model()
