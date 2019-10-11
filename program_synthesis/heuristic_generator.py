@@ -2,7 +2,7 @@ from pprint import pprint
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 from program_synthesis.synthesizer import Synthesizer
 from program_synthesis.verifier import Verifier
@@ -13,7 +13,8 @@ class HeuristicGenerator(object):
     """
     A class to go through the synthesizer-verifier loop
     """
-    def __init__(self, X_train, X_val, Y_val, Y_train=None, b=0.5):
+    def __init__(self, X_train, X_val, Y_val, Y_train=None, n_classes=2,
+                 b=0.5):
         """ 
         Initialize HeuristicGenerator object
 
@@ -31,6 +32,7 @@ class HeuristicGenerator(object):
         self.vf = None
         self.syn = None
         self.hf = []
+        self.n_classes = n_classes
         self.feat_combos = []
 
     def apply_heuristics(self, heuristics, primitive_matrix, feat_combos,
@@ -80,7 +82,7 @@ class HeuristicGenerator(object):
             L_temp_train = self.apply_heuristics(heuristics[i], self.X_train,
                                                  feat_combos[i], beta_opt_temp)
 
-            beta_opt = np.append(beta_opt, beta_opt_temp)
+            beta_opt = np.append(beta_opt, beta_opt_temp)  #?
             if i == 0:
                 L_val = np.append(
                     L_val, L_temp_val)  #converts to 1D array automatically
@@ -94,7 +96,7 @@ class HeuristicGenerator(object):
 
         #Use F1 trade-off for reliability
         acc_cov_scores = [
-            f1_score(self.Y_val, L_val[:, i], average='micro')
+            f1_score(self.Y_val, L_val[:, i], average='weighted')
             for i in range(np.shape(L_val)[1])
         ]
         acc_cov_scores = np.nan_to_num(acc_cov_scores)
@@ -210,6 +212,7 @@ class HeuristicGenerator(object):
         self.train_marginals = self.vf.train_marginals
 
         def calculate_accuracy(marginals, b, ground):
+            print("ÄNDERE MICH -> DAS HIER IST DIE FALSCHE FUNKTION")
             total = np.shape(np.where(marginals != 0.5))[1]
             labels = np.sign(2 * (marginals - 0.5))
             exit(-23)
@@ -235,10 +238,8 @@ class HeuristicGenerator(object):
         - idx of the features it relies on
         - if dt, then the thresholds?
         '''
-        def calculate_accuracy(marginals, b, ground):
-            total = np.shape(np.where(marginals != 0.5))[1]
-            labels = np.sign(2 * (marginals - 0.5))
-            return np.sum(labels == ground) / float(total)
+        def calculate_accuracy(predicted, b, ground):
+            return accuracy_score(ground, predicted)
 
         def calculate_coverage(marginals, b, ground):
             total = np.shape(np.where(marginals != 0))[1]

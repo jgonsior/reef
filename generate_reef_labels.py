@@ -43,22 +43,23 @@ random.seed(config.random_seed)
 
 warnings.filterwarnings(action='ignore', category=UndefinedMetricWarning)
 
-train = pd.read_csv(config.dataset_path + '/6_train.csv')
-test = pd.read_csv(config.dataset_path + '/6_test.csv')
-val = pd.read_csv(config.dataset_path + '/6_val.csv')
+if config.dataset_path != 'imdb':
+    train = pd.read_csv(config.dataset_path + '/6_train.csv')
+    test = pd.read_csv(config.dataset_path + '/6_test.csv')
+    val = pd.read_csv(config.dataset_path + '/6_val.csv')
 
-X_train, meta_train, Y_train, label_encoder_train = splitFeatures(train)
-X_test, meta_test, Y_test, label_encoder_test = splitFeatures(test)
-X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
+    X_train, meta_train, Y_train, label_encoder_train = splitFeatures(train)
+    X_test, meta_test, Y_test, label_encoder_test = splitFeatures(test)
+    X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
 
-n_classes = max(len(label_encoder_val.classes_),
-                len(label_encoder_test.classes_),
-                len(label_encoder_train.classes_))
-# features, meta NOT features, label!
-
-#  dl = DataLoader()
-#  X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
-#  data_path='./data/imdb/budgetandactors.txt')
+    n_classes = max(len(label_encoder_val.classes_),
+                    len(label_encoder_test.classes_),
+                    len(label_encoder_train.classes_))
+else:
+    dl = DataLoader()
+    X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
+        data_path='./data/imdb/budgetandactors.txt')
+    n_classes = 2
 
 #  pprint(X_train)
 #  pprint(Y_train)
@@ -86,11 +87,15 @@ n_classes = max(len(label_encoder_val.classes_),
 
 # In[3]:
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / n_classes)
-hg.run_synthesizer(max_cardinality=2, idx=None, keep=5, model='dt')
+hg = HeuristicGenerator(X_train,
+                        X_val,
+                        Y_val,
+                        Y_train,
+                        n_classes=n_classes,
+                        b=1 / n_classes)
+hg.run_synthesizer(max_cardinality=1, idx=None, keep=5, model='nn')
 print("Heuristics stats")
 pprint(hg.heuristic_stats())
-exit(-3)
 # ## 1. Synthesize Heuristics
 # We start by generating all possible heuristics based on the labeled, validation set that take in a single feature (i.e. word for this example) as input.
 #
@@ -100,7 +105,7 @@ exit(-3)
 
 syn = Synthesizer(X_val, Y_val, b=1 / n_classes)
 
-heuristics, feature_inputs = syn.generate_heuristics('nn', 2)
+heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
 print("Total Heuristics Generated: ", np.shape(heuristics))
 
 # For each generated heuristic, we find an associated $\beta$ value.  This corresponds to defining a region of **low confidence** labels, which the heuristic will abstain for, while labeling the rest of the datapoints as $1$ or $-1$.
@@ -118,8 +123,8 @@ pprint(optimal_betas)
 # In the first iteration, we simply pick the 3 heuristics that perform the best on the labeled validation set.
 
 # In[6]:
-
-top_idx = hg.prune_heuristics(heuristics, feature_inputs, keep=3)
+pprint('minus')
+top_idx = hg.prune_heuristics(heuristics, feature_inputs, keep=5)
 print('Features chosen heuristics are based on: ', top_idx)
 
 # In subsequent iterations (step 4), we weight the Jaccard score (overlap of how many datapoints in the train set receive labels and how many are labeled by existing heuristics) and F1 score equally. We demonstrate this with a toy vector of previously labeled data.

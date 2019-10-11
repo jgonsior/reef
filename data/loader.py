@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from pprint import pprint
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
+import pandas as pd
 
 
 def parse_file(filename):
@@ -43,8 +44,8 @@ def split_data(X, plots, y):
     num_sample = np.shape(X)[0]
     num_test = 500
 
-    X_test = X[0:num_test, :]
-    X_train = X[num_test:, :]
+    X_test = X.iloc[0:num_test, :]
+    X_train = X.iloc[num_test:, :]
     plots_train = plots[num_test:]
     plots_test = plots[0:num_test]
 
@@ -56,7 +57,7 @@ def split_data(X, plots, y):
     X_tr, X_te, y_tr, y_te, plots_tr, plots_te = train_test_split(
         X_train, y_train, plots_train, test_size=test_ratio)
 
-    return np.array(X_tr.todense()), np.array(X_te.todense()), np.array(X_test.todense()), \
+    return X_tr, X_te, X_test, \
         np.array(y_tr), np.array(y_te), np.array(y_test), plots_tr, plots_te, plots_test
 
 
@@ -91,7 +92,9 @@ class DataLoader(object):
         X = vectorizer.fit_transform(plots)
         valid_feats = np.where(np.sum(X, 0) > 2)[1]
         X = X[:, valid_feats]
-        pprint(X)
+
+        X = pd.DataFrame(X.toarray())
+
         #Split Dataset into Train, Val, Test
         train_primitive_matrix, val_primitive_matrix, test_primitive_matrix, \
             train_ground, val_ground, test_ground, \
@@ -100,6 +103,6 @@ class DataLoader(object):
         #Prune Feature Space
         common_idx = self.prune_features(val_primitive_matrix,
                                          train_primitive_matrix)
-        return train_primitive_matrix[:, common_idx], val_primitive_matrix[:, common_idx], test_primitive_matrix[:, common_idx], \
+        return train_primitive_matrix.iloc[:, common_idx], val_primitive_matrix.iloc[:, common_idx], test_primitive_matrix.iloc[:, common_idx], \
             np.array(train_ground), np.array(val_ground), np.array(test_ground), \
             train_plots, val_plots, test_plots

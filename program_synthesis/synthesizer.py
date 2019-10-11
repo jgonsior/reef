@@ -55,16 +55,19 @@ class Synthesizer(object):
         if model == 'dt':
             dt = DecisionTreeClassifier(max_depth=len(comb))
             dt.fit(X, self.val_ground)
+            pprint(dt.score(X, self.val_ground))
             return dt
 
         elif model == 'lr':
-            lr = LogisticRegression()
+            lr = LogisticRegression(multi_class='auto')
             lr.fit(X, self.val_ground)
+            pprint(lr.score(X, self.val_ground))
             return lr
 
         elif model == 'nn':
             nn = KNeighborsClassifier(algorithm='kd_tree')
             nn.fit(X, self.val_ground)
+            pprint(nn.score(X, self.val_ground))
             return nn
 
     def generate_heuristics(self, model, max_cardinality=1):
@@ -74,7 +77,6 @@ class Synthesizer(object):
         model: fit logistic regression or a decision tree
         max_cardinality: max number of features each heuristic operates over
         """
-
         #have to make a dictionary?? or feature combinations here? or list of arrays?
         # good question!
         feature_combinations_final = []
@@ -110,7 +112,9 @@ class Synthesizer(object):
         for beta in beta_params:
             labels_cutoff = get_labels_cutoff(highest_probabilities,
                                               most_likely_labels, beta)
-            f1.append(f1_score(ground, labels_cutoff, average='weighted'))
+            f1score = f1_score(ground, labels_cutoff, average='weighted')
+            f1.append(f1score)
+            #  print("beta: ", beta, "\t", f1score)
 
         f1 = np.nan_to_num(f1)
         optimal_beta = beta_params[np.argsort(np.array(f1))[-1]]
@@ -128,6 +132,6 @@ class Synthesizer(object):
         beta_opt = []
         for i, hf in enumerate(heuristics):
             marginals = hf.predict_proba(X.iloc[:, list(feat_combos[i])])
-            beta_opt.append((self.beta_optimizer(marginals, ground)))
+            beta_opt.append(self.beta_optimizer(marginals, ground))
 
         return beta_opt
