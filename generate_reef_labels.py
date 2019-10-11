@@ -51,9 +51,9 @@ X_train, meta_train, Y_train, label_encoder_train = splitFeatures(train)
 X_test, meta_test, Y_test, label_encoder_test = splitFeatures(test)
 X_val, meta_val, Y_val, label_encoder_val = splitFeatures(val)
 
-amount_of_labels = max(len(label_encoder_val.classes_),
-                       len(label_encoder_test.classes_),
-                       len(label_encoder_train.classes_))
+n_classes = max(len(label_encoder_val.classes_),
+                len(label_encoder_test.classes_),
+                len(label_encoder_train.classes_))
 # features, meta NOT features, label!
 
 #  dl = DataLoader()
@@ -86,11 +86,11 @@ amount_of_labels = max(len(label_encoder_val.classes_),
 
 # In[3]:
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
-hg.run_synthesizer(max_cardinality=1, idx=None, keep=5, model='dt')
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / n_classes)
+hg.run_synthesizer(max_cardinality=2, idx=None, keep=5, model='dt')
 print("Heuristics stats")
 pprint(hg.heuristic_stats())
-
+exit(-3)
 # ## 1. Synthesize Heuristics
 # We start by generating all possible heuristics based on the labeled, validation set that take in a single feature (i.e. word for this example) as input.
 #
@@ -98,10 +98,10 @@ pprint(hg.heuristic_stats())
 
 # In[4]:
 
-syn = Synthesizer(X_val, Y_val, b=1 / amount_of_labels)
+syn = Synthesizer(X_val, Y_val, b=1 / n_classes)
 
-heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
-print("Total Heuristics Generated: ", np.shape(heuristics)[1])
+heuristics, feature_inputs = syn.generate_heuristics('nn', 2)
+print("Total Heuristics Generated: ", np.shape(heuristics))
 
 # For each generated heuristic, we find an associated $\beta$ value.  This corresponds to defining a region of **low confidence** labels, which the heuristic will abstain for, while labeling the rest of the datapoints as $1$ or $-1$.
 
@@ -130,11 +130,8 @@ print('Features chosen heuristics are based on: ', top_idx)
 # In[7]:
 # hg.L_train enthält pro Trainingsdatenpunkt eine Liste mit den vorhergesagten Labels der einzelnen Heuristics
 # @todo: check if -1 is contained in there at least onece
-pprint(hg.L_train.shape)
-pprint(hg.L_train)
-pprint(hg.L_val)
 
-verifier = Verifier(hg.L_train, hg.L_val, Y_val, has_snorkel=False)
+verifier = Verifier(hg.L_train, hg.L_val, Y_val, n_classes, has_snorkel=False)
 
 verifier.train_gen_model()
 verifier.assign_marginals()
@@ -157,7 +154,7 @@ plt.clf()
 plt.hist(verifier.val_marginals)
 plt.title('Validation Set Probabilistic Labels')
 #  plt.show()
-feedback_idx = verifier.find_vague_points(gamma=0.1, b=1 / amount_of_labels)
+feedback_idx = verifier.find_vague_points(gamma=0.1, b=1 / n_classes)
 print('Percentage of Low Confidence Points: ',
       np.shape(feedback_idx)[0] / float(np.shape(Y_val)[0]))
 
@@ -176,7 +173,7 @@ training_coverage = []
 training_marginals = []
 idx = None
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / amount_of_labels)
+hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / n_classes)
 plt.figure(figsize=(12, 6))
 for i in range(3, 26):
     if (i - 2) % 5 == 0:

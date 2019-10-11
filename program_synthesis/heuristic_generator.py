@@ -165,10 +165,10 @@ class HeuristicGenerator(object):
         """ 
         Generates Verifier object and saves marginals
         """
-        ###THIS IS WHERE THE SNORKEL FLAG IS SET!!!!
         self.vf = Verifier(self.L_train,
                            self.L_val,
                            self.Y_val,
+                           self.n_classes,
                            has_snorkel=False)
         self.vf.train_gen_model()
         self.vf.assign_marginals()

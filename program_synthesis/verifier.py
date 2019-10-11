@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import sparse
-from .label_aggregator import LabelAggregator
+from .multi_label_aggregator import MultiLabelAggregator
 from pprint import pprint
 
 
@@ -18,17 +18,26 @@ class Verifier(object):
     """
     A class for the Snorkel Model Verifier
     """
-    def __init__(self, L_train, L_val, val_ground, has_snorkel=True):
+    def __init__(self, L_train, L_val, val_ground, n_classes,
+                 has_snorkel=True):
         self.L_train = L_train.astype(int)
         self.L_val = L_val.astype(int)
         self.val_ground = val_ground
+        self.n_classes = n_classes
 
     def train_gen_model(self, deps=False, grid_search=False):
         """ 
         Calls appropriate generative model
         """
-        gen_model = LabelAggregator()
-        gen_model.train(self.L_train, rate=1e-3, mu=1e-6, verbose=False)
+        gen_model = MultiLabelAggregator(self.n_classes)
+        gen_model.train(self.L_train, rate=1e-3, mu=1e-6, verbose=True)
+        pprint(self.L_train)
+        marginals = gen_model.marginals(sparse.csr_matrix(self.L_train))
+
+        for x, marginal in zip(self.L_train, marginals):
+            print(x, "\t -> \t", np.argmax(marginal), "\t", marginal)
+            print("\n")
+        exit(-3333)
         self.gen_model = gen_model
 
     def assign_marginals(self):
