@@ -36,8 +36,8 @@ class Verifier(object):
         gen_model.train(self.L_train, rate=1e-3, mu=1e-6, verbose=True)
         import itertools
         self.L_train = np.array([
-            list(i) for i in itertools.product(list(range(self.n_classes + 1)),
-                                               repeat=5)
+            list(i)
+            for i in itertools.product(list(range(self.n_classes)), repeat=5)
         ])
         pprint(self.L_train)
         marginals = gen_model.marginals(self.L_train)
