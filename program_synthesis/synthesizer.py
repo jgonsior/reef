@@ -14,7 +14,7 @@ class Synthesizer(object):
     """
     A class to synthesize heuristics from primitives and validation labels
     """
-    def __init__(self, primitive_matrix, val_ground, b=0.5):
+    def __init__(self, primitive_matrix, val_ground, b=0.5, n_jobs=4):
         """ 
         Initialize Synthesizer object
 
@@ -25,6 +25,7 @@ class Synthesizer(object):
         self.val_ground = val_ground
         self.p = np.shape(self.val_primitive_matrix)[1]
         self.b = b
+        self.n_jobs = n_jobs
 
     def generate_feature_combinations(self, cardinality=1):
         """ 
@@ -55,19 +56,19 @@ class Synthesizer(object):
         if model == 'dt':
             dt = DecisionTreeClassifier(max_depth=len(comb))
             dt.fit(X, self.val_ground)
-            pprint(dt.score(X, self.val_ground))
+            #  pprint(dt.score(X, self.val_ground))
             return dt
 
         elif model == 'lr':
-            lr = LogisticRegression(multi_class='auto')
+            lr = LogisticRegression(multi_class='auto', n_jobs=self.n_jobs)
             lr.fit(X, self.val_ground)
-            pprint(lr.score(X, self.val_ground))
+            #  pprint(lr.score(X, self.val_ground))
             return lr
 
         elif model == 'nn':
-            nn = KNeighborsClassifier(algorithm='kd_tree')
+            nn = KNeighborsClassifier(algorithm='kd_tree', n_jobs=self.n_jobs)
             nn.fit(X, self.val_ground)
-            pprint(nn.score(X, self.val_ground))
+            #  pprint(nn.score(X, self.val_ground))
             return nn
 
     def generate_heuristics(self, model, max_cardinality=1):

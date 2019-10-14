@@ -28,7 +28,7 @@ parser.add_argument('--nQueriesPerIteration', type=int, default=150)
 parser.add_argument('--plot', action='store_true')
 parser.add_argument('--mergedLabels', action='store_true')
 parser.add_argument('--output', default="results/default")
-parser.add_argument('--cores', type=int, default=1)
+parser.add_argument('--n_jobs', type=int, default=4)
 parser.add_argument('--start_size', type=float)
 parser.add_argument('--random_seed', type=int, default=23)
 
@@ -69,7 +69,6 @@ else:
 
 #  pprint(X_val)
 #  pprint(Y_val)
-#  exit(-3)
 
 # # Reef Steps
 # Reef generates heuristics in an iterative manner, with each iteration consisting of the following steps:
@@ -92,6 +91,7 @@ hg = HeuristicGenerator(X_train,
                         Y_val,
                         Y_train,
                         n_classes=n_classes,
+                        n_jobs=config.n_jobs,
                         b=1 / n_classes)
 hg.run_synthesizer(max_cardinality=1, idx=None, keep=5, model='nn')
 print("Heuristics stats")
@@ -103,7 +103,7 @@ pprint(hg.heuristic_stats())
 
 # In[4]:
 
-syn = Synthesizer(X_val, Y_val, b=1 / n_classes)
+syn = Synthesizer(X_val, Y_val, b=1 / n_classes, n_jobs=config.n_jobs)
 
 heuristics, feature_inputs = syn.generate_heuristics('nn', 1)
 print("Total Heuristics Generated: ", np.shape(heuristics))
@@ -118,12 +118,11 @@ plt.hist(optimal_betas)
 plt.xlabel('Beta Values')
 #  plt.show()
 print("Optimal betas")
-pprint(optimal_betas)
+#  pprint(optimal_betas)
 # ## 2. Prune Heuristics
 # In the first iteration, we simply pick the 3 heuristics that perform the best on the labeled validation set.
 
 # In[6]:
-pprint('minus')
 top_idx = hg.prune_heuristics(heuristics, feature_inputs, keep=5)
 print('Features chosen heuristics are based on: ', top_idx)
 
@@ -145,6 +144,7 @@ print("Train marginals")
 pprint(verifier.train_marginals)
 print("Verifier marginals")
 pprint(verifier.val_marginals)
+exit(-3)
 # We visualize what these labels look like. Note that with a single iteration, none of the datapoints receive a probabilistic label greater than 0.5, but this is fixed after running the process iteratively (Step 4). __These labels are then used to train an end model, such as an LSTM, and not used as final predictions.__
 
 # In[8]:
@@ -162,7 +162,7 @@ plt.title('Validation Set Probabilistic Labels')
 feedback_idx = verifier.find_vague_points(gamma=0.1, b=1 / n_classes)
 print('Percentage of Low Confidence Points: ',
       np.shape(feedback_idx)[0] / float(np.shape(Y_val)[0]))
-
+exit(-3)
 # ## 4. Repeat Iterative Process of Generating Heuristics
 # We repeat this process of synthesizing, pruning, and verifying heuristics iteratively. In this example, we generate 25 total heuristics.
 #
@@ -215,6 +215,7 @@ for i in range(3, 26):
     if idx == []:
         break
 plt.tight_layout()
+plt.show()
 
 # In the plots above, we show the distribution of probabilistic labels Reef assigns to the training set in the first few iterations.
 #
@@ -224,6 +225,7 @@ plt.tight_layout()
 
 plt.hist(training_marginals[-1], bins=10, range=(0.0, 1.0))
 plt.title('Final Distribution')
+plt.show()
 
 print("Program Synthesis Train Accuracy: ", training_accuracy[-1])
 print("Program Synthesis Train Coverage: ", training_coverage[-1])

@@ -13,7 +13,13 @@ class HeuristicGenerator(object):
     """
     A class to go through the synthesizer-verifier loop
     """
-    def __init__(self, X_train, X_val, Y_val, Y_train=None, n_classes=2,
+    def __init__(self,
+                 X_train,
+                 X_val,
+                 Y_val,
+                 Y_train=None,
+                 n_classes=2,
+                 n_jobs=4,
                  b=0.5):
         """ 
         Initialize HeuristicGenerator object
@@ -33,6 +39,7 @@ class HeuristicGenerator(object):
         self.syn = None
         self.hf = []
         self.n_classes = n_classes
+        self.n_jobs = n_jobs
         self.feat_combos = []
 
     def apply_heuristics(self, heuristics, primitive_matrix, feat_combos,
@@ -96,8 +103,11 @@ class HeuristicGenerator(object):
 
         #Use F1 trade-off for reliability
         acc_cov_scores = [
-            f1_score(self.Y_val, L_val[:, i], average='weighted')
-            for i in range(np.shape(L_val)[1])
+            f1_score(
+                self.Y_val,
+                L_val[:, i],
+                average='weighted',
+            ) for i in range(np.shape(L_val)[1])
         ]
         acc_cov_scores = np.nan_to_num(acc_cov_scores)
 
@@ -131,7 +141,10 @@ class HeuristicGenerator(object):
             ground = self.Y_val[idx]
 
         #Generate all possible heuristics
-        self.syn = Synthesizer(primitive_matrix, ground, b=self.b)
+        self.syn = Synthesizer(primitive_matrix,
+                               ground,
+                               b=self.b,
+                               n_jobs=self.n_jobs)
 
         #Un-flatten indices
         def index(a, inp):
@@ -215,7 +228,7 @@ class HeuristicGenerator(object):
             print("ÄNDERE MICH -> DAS HIER IST DIE FALSCHE FUNKTION")
             total = np.shape(np.where(marginals != 0.5))[1]
             labels = np.sign(2 * (marginals - 0.5))
-            exit(-23)
+            #  exit(-23)
             return np.sum(labels == ground) / float(total)
 
         def calculate_coverage(marginals, b, ground):
