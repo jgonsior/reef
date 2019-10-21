@@ -42,8 +42,8 @@ class Verifier(object):
         #  pprint(self.L_train)
         marginals = gen_model.marginals(self.L_train)
 
-        for x, marginal in zip(self.L_train, marginals):
-            print(x, "\t -> \t", np.argmax(marginal), "\t", marginal)
+        #  for x, marginal in zip(self.L_train, marginals):
+        #  print(x, "\t -> \t", np.argmax(marginal), "\t", marginal)
         self.gen_model = gen_model
 
     def assign_marginals(self):
