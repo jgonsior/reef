@@ -58,24 +58,10 @@ if config.dataset_path != 'imdb':
 else:
     dl = DataLoader()
     X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
-        data_path='./data/imdb/budgetandactors.txt')
+        data_path='./data/imdb/budgetandactors2.txt')
+    Y_val = [1 if y == 1 else 0 for y in Y_val]
+    Y_test = [1 if y == 1 else 0 for y in Y_test]
     n_classes = 2
-
-#  pprint(X_train)
-#  pprint(Y_train)
-
-#  pprint(X_test)
-#  pprint(Y_test)
-
-#  pprint(X_val)
-#  pprint(Y_val)
-
-# ## 4. Repeat Iterative Process of Generating Heuristics
-# We repeat this process of synthesizing, pruning, and verifying heuristics iteratively. In this example, we generate 25 total heuristics.
-#
-# _Note that this process wil take a few minutes to run since heuristic generation is not currently optimized in any manner_
-
-# In[10]:
 
 validation_accuracy = []
 training_accuracy = []
@@ -85,7 +71,12 @@ training_coverage = []
 training_marginals = []
 idx = None
 
-hg = HeuristicGenerator(X_train, X_val, Y_val, Y_train, b=1 / n_classes)
+hg = HeuristicGenerator(X_train,
+                        X_val,
+                        Y_val,
+                        Y_train,
+                        b=1 / n_classes,
+                        n_classes=n_classes)
 plt.figure(figsize=(12, 6))
 for i in range(3, 26):
     if (i - 2) % 5 == 0:

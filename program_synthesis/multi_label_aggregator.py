@@ -27,28 +27,18 @@ class MultiLabelAggregator(object):
             self.w[i] = one_vs_all_label_aggregator.w
 
     def marginals(self, X):
-        #  print("w")
-        #  pprint(self.w)
         marginals = [None] * self.n_classes
         for i, w in enumerate(self.w):
             # bevor ich X.dot(w) mache muss ich X erst wieder transformieren
             X_new = sparse.csr_matrix(self._one_vs_all(X, i))
             marginals[i] = odds_to_prob(X_new.dot(w))
         marginals = np.transpose(marginals)
-        #  print("neue marginals")
-        #  print(marginals)
-        #  pprint(np.array(marginals).shape)
         return np.array(marginals)
 
     def _one_vs_all(self, X, label):
         """ Create a one vs all encoded matrix """
-        #  print("davor: ", label)
-        #  pprint(X)
         X_new = np.zeros(X.shape)
         X_new[X == -1] = -1
         X_new[X == label] = 1
 
-        #  print("danach:")
-        #  pprint(X_new)
-        #  print("\n")
         return X_new

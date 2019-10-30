@@ -42,7 +42,7 @@ def parse_file(filename):
 def split_data(X, plots, y):
     np.random.seed(1234)
     num_sample = np.shape(X)[0]
-    num_test = 500
+    num_test = 1
 
     X_test = X.iloc[0:num_test, :]
     X_train = X.iloc[num_test:, :]

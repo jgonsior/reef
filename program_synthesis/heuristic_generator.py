@@ -34,7 +34,6 @@ class HeuristicGenerator(object):
         self.Y_val = Y_val
         self.Y_train = Y_train
         self.b = b
-
         self.vf = None
         self.syn = None
         self.hf = []
@@ -51,12 +50,11 @@ class HeuristicGenerator(object):
         feat_combos: primitive indices to apply heuristics to
         beta: best beta value for associated heuristics
         """
-
         L = np.zeros((np.shape(primitive_matrix)[0], len(heuristics)))
         for i, hf in enumerate(heuristics):
             L[:, i] = marginals_to_labels(
                 hf, primitive_matrix.iloc[:, list(feat_combos[i])],
-                beta_opt[i])
+                beta_opt[i], self.n_classes)
         return L
 
     def prune_heuristics(self, heuristics, feat_combos, keep=1):
@@ -84,6 +82,7 @@ class HeuristicGenerator(object):
                                                        self.X_val,
                                                        feat_combos[i],
                                                        self.Y_val)
+
             L_temp_val = self.apply_heuristics(heuristics[i], self.X_val,
                                                feat_combos[i], beta_opt_temp)
             L_temp_train = self.apply_heuristics(heuristics[i], self.X_train,
@@ -98,15 +97,15 @@ class HeuristicGenerator(object):
                     L_train, L_temp_train)  #converts to 1D array automatically
                 L_train = np.reshape(L_train, np.shape(L_temp_train))
             else:
+                pprint("UIUIUIU" * 10000)
                 L_val = np.concatenate((L_val, L_temp_val), axis=1)
                 L_train = np.concatenate((L_train, L_temp_train), axis=1)
-
         #Use F1 trade-off for reliability
         acc_cov_scores = [
             f1_score(
                 self.Y_val,
                 L_val[:, i],
-                average='weighted',
+                average='micro',
             ) for i in range(np.shape(L_val)[1])
         ]
         acc_cov_scores = np.nan_to_num(acc_cov_scores)
@@ -118,7 +117,6 @@ class HeuristicGenerator(object):
                 train_num_labeled, np.abs(L_train))
         else:
             jaccard_scores = np.ones(np.shape(acc_cov_scores))
-
         #Weighting the two scores to find best heuristic
         combined_scores = 0.5 * acc_cov_scores + 0.5 * jaccard_scores
         sort_idx = np.argsort(combined_scores)[::-1][0:keep]
@@ -135,14 +133,15 @@ class HeuristicGenerator(object):
         """
         if idx == None:
             primitive_matrix = self.X_val
-            ground = self.Y_val
+            Y_true = self.Y_val
         else:
             primitive_matrix = self.X_val.iloc[idx, :]
-            ground = self.Y_val[idx]
+            Y_true = self.Y_val[idx]
 
         #Generate all possible heuristics
         self.syn = Synthesizer(primitive_matrix,
-                               ground,
+                               Y_true,
+                               n_classes=self.n_classes,
                                b=self.b,
                                n_jobs=self.n_jobs)
 
@@ -167,7 +166,6 @@ class HeuristicGenerator(object):
         for i in sort_idx:
             self.hf.append(index(hf, i))
             self.feat_combos.append(index(feat_combos, i))
-
         #create appended L matrices for validation and train set
         beta_opt = self.syn.find_optimal_beta(self.hf, self.X_val,
                                               self.feat_combos, self.Y_val)
@@ -215,26 +213,38 @@ class HeuristicGenerator(object):
             set(list(np.concatenate((vague_idx, incorrect_idx)))))
 
     def evaluate(self):
-        print("\n" * 5)
-        print("EVA")
-        print("\n" * 5)
+        print("\nEVA")
         """ 
         Calculate the accuracy and coverage for train and validation sets
         """
+
+        # why? :crying_emoji:
         self.val_marginals = self.vf.val_marginals
         self.train_marginals = self.vf.train_marginals
 
-        def calculate_accuracy(marginals, b, ground):
-            print("ÄNDERE MICH -> DAS HIER IST DIE FALSCHE FUNKTION")
-            total = np.shape(np.where(marginals != 0.5))[1]
-            labels = np.sign(2 * (marginals - 0.5))
-            #  exit(-23)
-            return np.sum(labels == ground) / float(total)
+        def calculate_accuracy(marginals, b, Y_true):
+            total = np.shape(np.where(marginals != b))[1]
+            #  print(marginals)
+            #  print(np.amax(marginals, axis=1))
+            #  print(np.where(np.amax(marginals, axis=1) != b))
+            Y_pred = np.argmax(np.where(np.amax(marginals, axis=1) != b),
+                               axis=1)
+            correct_labels = np.sum(Y_pred == Y_true)
+            #  print("Acc:", correct_labels / total)
+            return correct_labels / total
 
-        def calculate_coverage(marginals, b, ground):
-            total = np.shape(np.where(marginals != 0.5))[1]
-            labels = np.sign(2 * (marginals - 0.5))
-            return total / float(len(labels))
+        def calculate_coverage(marginals, b, Y_true):
+            #  print(marginals)
+            #  print("shape")
+            #  pprint(marginals.shape)
+            #  pprint(np.where(np.amax(marginals, axis=1) != b)[0])
+            #  pprint(np.where(marginals != b)[1])
+            #  pprint(np.shape(np.where(marginals != b)))
+            print("ui")
+            total = np.shape(np.where(marginals != b))[1]
+            #  pprint(total)
+            #  pprint(marginals.shape[0])
+            return total / marginals.shape[0]
 
         self.val_accuracy = calculate_accuracy(self.val_marginals, self.b,
                                                self.Y_val)
@@ -251,10 +261,10 @@ class HeuristicGenerator(object):
         - idx of the features it relies on
         - if dt, then the thresholds?
         '''
-        def calculate_accuracy(predicted, b, ground):
-            return accuracy_score(ground, predicted)
+        def calculate_accuracy(predicted, b, Y_true):
+            return accuracy_score(Y_true, predicted)
 
-        def calculate_coverage(marginals, b, ground):
+        def calculate_coverage(marginals, b, Y_true):
             total = np.shape(np.where(marginals != 0))[1]
             labels = marginals
             return total / float(len(labels))

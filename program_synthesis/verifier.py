@@ -34,14 +34,7 @@ class Verifier(object):
         """
         gen_model = MultiLabelAggregator(self.n_classes)
         gen_model.train(self.L_train, rate=1e-3, mu=1e-6, verbose=True)
-        import itertools
-        #  self.L_train = np.array([
-        #  list(i)
-        #  for i in itertools.product(list(range(self.n_classes)), repeat=5)
-        #  ])
-        #  pprint(self.L_train)
-        marginals = gen_model.marginals(self.L_train)
-
+        #  marginals = gen_model.marginals(self.L_train)
         #  for x, marginal in zip(self.L_train, marginals):
         #  print(x, "\t -> \t", np.argmax(marginal), "\t", marginal)
         self.gen_model = gen_model
@@ -52,6 +45,8 @@ class Verifier(object):
         """
         self.train_marginals = self.gen_model.marginals(self.L_train)
         self.val_marginals = self.gen_model.marginals(self.L_val)
+        #  for marginal in self.val_marginals:
+        #  print(marginal)
         #print 'Learned Accuracies: ', odds_to_prob(self.gen_model.w)
 
     def find_vague_points(self, gamma=0.1, b=0.5):

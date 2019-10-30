@@ -14,7 +14,12 @@ class Synthesizer(object):
     """
     A class to synthesize heuristics from primitives and validation labels
     """
-    def __init__(self, primitive_matrix, val_ground, b=0.5, n_jobs=4):
+    def __init__(self,
+                 primitive_matrix,
+                 val_ground,
+                 n_classes,
+                 b=0.5,
+                 n_jobs=4):
         """ 
         Initialize Synthesizer object
 
@@ -26,6 +31,7 @@ class Synthesizer(object):
         self.p = np.shape(self.val_primitive_matrix)[1]
         self.b = b
         self.n_jobs = n_jobs
+        self.n_classes = n_classes
 
     def generate_feature_combinations(self, cardinality=1):
         """ 
@@ -35,7 +41,6 @@ class Synthesizer(object):
         """
         primitive_idx = list(range(self.p))
         feature_combinations = []
-
         for comb in itertools.combinations(primitive_idx, cardinality):
             feature_combinations.append(comb)
 
@@ -56,19 +61,16 @@ class Synthesizer(object):
         if model == 'dt':
             dt = DecisionTreeClassifier(max_depth=len(comb))
             dt.fit(X, self.val_ground)
-            #  pprint(dt.score(X, self.val_ground))
             return dt
 
         elif model == 'lr':
             lr = LogisticRegression(multi_class='auto', n_jobs=self.n_jobs)
             lr.fit(X, self.val_ground)
-            #  pprint(lr.score(X, self.val_ground))
             return lr
 
         elif model == 'nn':
             nn = KNeighborsClassifier(algorithm='kd_tree', n_jobs=self.n_jobs)
             nn.fit(X, self.val_ground)
-            #  pprint(nn.score(X, self.val_ground))
             return nn
 
     def generate_heuristics(self, model, max_cardinality=1):
@@ -91,7 +93,6 @@ class Synthesizer(object):
 
             feature_combinations_final.append(feature_combinations)
             heuristics_final.append(heuristics)
-
         return heuristics_final, feature_combinations_final
 
     def beta_optimizer(self, marginals, ground):
@@ -104,7 +105,7 @@ class Synthesizer(object):
 
         #Set the range of beta params
         #0.25 instead of 0.0 as a min makes controls coverage better
-        beta_params = np.linspace(self.b, 1, 10)
+        beta_params = np.linspace(self.b / 2, 1, 10)
 
         highest_probabilities = np.amax(marginals, axis=1)
         most_likely_labels = np.argmax(marginals, axis=1)
@@ -112,10 +113,10 @@ class Synthesizer(object):
 
         for beta in beta_params:
             labels_cutoff = get_labels_cutoff(highest_probabilities,
-                                              most_likely_labels, beta)
+                                              most_likely_labels, beta,
+                                              self.n_classes)
             f1score = f1_score(ground, labels_cutoff, average='weighted')
             f1.append(f1score)
-            #  print("beta: ", beta, "\t", f1score)
 
         f1 = np.nan_to_num(f1)
         optimal_beta = beta_params[np.argsort(np.array(f1))[-1]]
@@ -134,5 +135,4 @@ class Synthesizer(object):
         for i, hf in enumerate(heuristics):
             marginals = hf.predict_proba(X.iloc[:, list(feat_combos[i])])
             beta_opt.append(self.beta_optimizer(marginals, ground))
-
         return beta_opt
