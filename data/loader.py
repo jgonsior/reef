@@ -31,7 +31,7 @@ def parse_file(filename):
             idx.append(i)
         elif 'Romance' in genre:
             plots = plots + [movie['Plot']]
-            gt.append(-1)
+            gt.append(0)
             idx.append(i)
         else:
             continue
@@ -42,7 +42,10 @@ def parse_file(filename):
 def split_data(X, plots, y):
     np.random.seed(1234)
     num_sample = np.shape(X)[0]
-    num_test = 1
+    if len(X) == 12:
+        num_test = 1
+    else:
+        num_test = 500
 
     X_test = X.iloc[0:num_test, :]
     X_train = X.iloc[num_test:, :]

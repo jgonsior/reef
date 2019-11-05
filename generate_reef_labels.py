@@ -43,7 +43,7 @@ random.seed(config.random_seed)
 
 warnings.filterwarnings(action='ignore', category=UndefinedMetricWarning)
 
-if config.dataset_path != 'imdb':
+if config.dataset_path != 'imdb' and config.dataset_path != 'imdb_small':
     train = pd.read_csv(config.dataset_path + '/6_train.csv')
     test = pd.read_csv(config.dataset_path + '/6_test.csv')
     val = pd.read_csv(config.dataset_path + '/6_val.csv')
@@ -55,10 +55,19 @@ if config.dataset_path != 'imdb':
     n_classes = max(len(label_encoder_val.classes_),
                     len(label_encoder_test.classes_),
                     len(label_encoder_train.classes_))
-else:
+
+elif config.dataset_path == 'imdb_small':
     dl = DataLoader()
     X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
         data_path='./data/imdb/budgetandactors2.txt')
+    Y_val = [1 if y == 1 else 0 for y in Y_val]
+    Y_test = [1 if y == 1 else 0 for y in Y_test]
+    n_classes = 2
+
+else:
+    dl = DataLoader()
+    X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
+        data_path='./data/imdb/budgetandactors.txt')
     Y_val = [1 if y == 1 else 0 for y in Y_val]
     Y_test = [1 if y == 1 else 0 for y in Y_test]
     n_classes = 2
@@ -77,10 +86,10 @@ hg = HeuristicGenerator(X_train,
                         Y_train,
                         b=1 / n_classes,
                         n_classes=n_classes)
+
 plt.figure(figsize=(12, 6))
 for i in range(3, 26):
-    if (i - 2) % 5 == 0:
-        print("Running iteration: ", str(i - 2))
+    print("Running iteration: ", str(i - 2))
 
     #Repeat synthesize-prune-verify at each iterations
     if i == 3:
@@ -108,12 +117,12 @@ for i in range(3, 26):
     #Find low confidence datapoints in the labeled set
     hg.find_feedback()
     idx = hg.feedback_idx
-
+    print("Feedback indices: ", len(idx))
     #Stop the iterative process when no low confidence labels
     if idx == []:
         break
 plt.tight_layout()
-plt.show()
+#  plt.show()
 
 # In the plots above, we show the distribution of probabilistic labels Reef assigns to the training set in the first few iterations.
 #
@@ -122,8 +131,8 @@ plt.show()
 # In[13]:
 plt.hist(training_marginals[-1], bins=10, range=(0.0, 1.0))
 plt.title('Final Distribution')
-plt.show()
-
+#  plt.show()
+print("final marginals", training_marginals)
 print("Program Synthesis Train Accuracy: ", training_accuracy)
 print("Program Synthesis Train Coverage: ", training_coverage)
 print("Program Synthesis Validation Accuracy: ", validation_accuracy)
