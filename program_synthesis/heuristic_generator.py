@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
-from program_synthesis.functions import marginals_to_labels
+from program_synthesis.functions import get_labels_cutoff, marginals_to_labels
 from program_synthesis.synthesizer import Synthesizer
 from program_synthesis.verifier import Verifier
 
@@ -41,8 +41,12 @@ class HeuristicGenerator(object):
         self.n_jobs = n_jobs
         self.feat_combos = []
 
-    def apply_heuristics(self, heuristics, primitive_matrix, feat_combos,
-                         beta_opt):
+    def apply_heuristics(self,
+                         heuristics,
+                         primitive_matrix,
+                         feat_combos,
+                         beta_opt,
+                         debug=False):
         """ 
         Apply given heuristics to given feature matrix X and abstain by beta
 
@@ -52,9 +56,15 @@ class HeuristicGenerator(object):
         """
         L = np.zeros((np.shape(primitive_matrix)[0], len(heuristics)))
         for i, hf in enumerate(heuristics):
+            #  if debug:
+            #  print(i, ": \t",
+            #  primitive_matrix.iloc[:, list(feat_combos[i])])
             L[:, i] = marginals_to_labels(
-                hf, primitive_matrix.iloc[:, list(feat_combos[i])],
-                beta_opt[i], self.n_classes)
+                hf,
+                primitive_matrix.iloc[:, list(feat_combos[i])],
+                beta_opt[i],
+                self.n_classes,
+                debug=debug)
         return L
 
     def prune_heuristics(self, heuristics, feat_combos, keep=1):
@@ -68,20 +78,17 @@ class HeuristicGenerator(object):
         #  -> the trick is, that sometimes the sum of abs(-1, 1) is being taken
 
         def calculate_jaccard_distance(num_labeled_total, num_labeled_L):
-            pprint(num_labeled_total)
-            pprint(num_labeled_L)
             scores = np.zeros(np.shape(num_labeled_L)[1])
             for i in range(np.shape(num_labeled_L)[1]):
                 scores[i] = np.sum(
                     np.minimum(
                         num_labeled_L[:, i], num_labeled_total)) / np.sum(
                             np.maximum(num_labeled_L[:, i], num_labeled_total))
-            exit(-1)
             return 1 - scores
 
-        X_val = np.array([])
-        X_train = np.array([])
-        beta_opt = np.array([])
+        L_vals = np.array([])
+        L_trains = np.array([])
+        beta_opts = np.array([])
         max_cardinality = len(heuristics)
         for i in range(max_cardinality):
             #Note that the LFs are being applied to the entire val set though they were developed on a subset...
@@ -89,42 +96,61 @@ class HeuristicGenerator(object):
                                                        self.X_val,
                                                        feat_combos[i],
                                                        self.Y_val)
-
-            X_val_temp = self.apply_heuristics(heuristics[i], self.X_val,
-                                               feat_combos[i], beta_opt_temp)
-            X_train_temp = self.apply_heuristics(heuristics[i], self.X_train,
-                                                 feat_combos[i], beta_opt_temp)
-
-            beta_opt = np.append(beta_opt, beta_opt_temp)
+            #  print(i, "beta ", beta_opt_temp)
+            L_val_temp = self.apply_heuristics(heuristics[i],
+                                               self.X_val,
+                                               feat_combos[i],
+                                               beta_opt_temp,
+                                               debug=False)
+            L_train_temp = self.apply_heuristics(heuristics[i],
+                                                 self.X_train,
+                                                 feat_combos[i],
+                                                 beta_opt_temp,
+                                                 debug=False)
+            #  print(beta_opt_temp)
+            beta_opts = np.append(beta_opts, beta_opt_temp)
             if i == 0:
-                X_val = np.append(
-                    X_val, X_val_temp)  #converts to 1D array automatically
-                X_val = np.reshape(X_val, np.shape(X_val_temp))
-                X_train = np.append(
-                    X_train, X_train_temp)  #converts to 1D array automatically
-                X_train = np.reshape(X_train, np.shape(X_train_temp))
+                L_vals = np.append(
+                    L_vals, L_val_temp)  #converts to 1D array automatically
+                L_vals = np.reshape(L_vals, np.shape(L_val_temp))
+                L_trains = np.append(
+                    L_trains,
+                    L_train_temp)  #converts to 1D array automatically
+                L_trains = np.reshape(L_trains, np.shape(L_train_temp))
             else:
                 pprint("UIUIUIU" * 10000)
-                X_val = np.concatenate((X_val, X_val_temp), axis=1)
-                X_train = np.concatenate((X_train, X_train_temp), axis=1)
+                L_vals = np.concatenate((L_vals, L_val_temp), axis=1)
+                L_trains = np.concatenate((L_trains, L_train_temp), axis=1)
+        #  print("L_val", L_vals)
         #Use F1 trade-off for reliability
         acc_cov_scores = [
             f1_score(
                 self.Y_val,
-                X_val[:, i],
+                L_vals[:, i],
                 average='micro',
-            ) for i in range(np.shape(X_val)[1])
+            ) for i in range(np.shape(L_vals)[1])
         ]
         acc_cov_scores = np.nan_to_num(acc_cov_scores)
+        #  -> vc berechnung stimmt ni -> dann nach und nach den imdb_small datensatz größer machen bis die Ergebnisse ni mehr miteinander übereinstimmen
+        #  print("\n" * 5)
+        #  for i in range(np.shape(L_vals)[1]):
+        #  print(i, L_vals[:, i])
+        #  print("acc_cov_scores", np.sort(acc_cov_scores))
+        #  print("\n" * 5)
 
         if self.vf != None:
             #Calculate Jaccard score for diversity
-            pprint(self.vf.X_train)
-            train_num_labeled = np.sum(self.vf.X_train >= 0, axis=1)
+            #  @todo stimmt das hier?!
+            #  lieber die formeln von unten für accuracy und coverage nehmen?!
+
+            #  Es sieht so aus als ob die accuracie gleich bleiben, wohingegen die coverages immer größer werden
+            train_num_labeled = np.sum(self.vf.L_train >= 0, axis=1)
             jaccard_scores = calculate_jaccard_distance(
-                train_num_labeled, np.abs(X_train))
+                train_num_labeled, np.abs(L_trains))
         else:
             jaccard_scores = np.ones(np.shape(acc_cov_scores))
+        #  print("accs", acc_cov_scores)
+        #  print("jaccs", jaccard_scores)
         #Weighting the two scores to find best heuristic
         combined_scores = 0.5 * acc_cov_scores + 0.5 * jaccard_scores
         sort_idx = np.argsort(combined_scores)[::-1][0:keep]
@@ -140,15 +166,17 @@ class HeuristicGenerator(object):
         model: train logistic regression ('lr') or decision tree ('dt')
         """
         if idx == None:
-            primitive_matrix = self.X_val
-            Y_true = self.Y_val
+            # first run, use the whole dataset
+            X_val = self.X_val
+            Y_val = self.Y_val
         else:
-            primitive_matrix = self.X_val.iloc[idx, :]
-            Y_true = np.array(self.Y_val)[idx]
+            # only use the points from the validation dataset for finding heuristics which had low confidence before!
+            X_val = self.X_val.iloc[idx, :]
+            Y_val = np.array(self.Y_val)[idx]
 
         #Generate all possible heuristics
-        self.syn = Synthesizer(primitive_matrix,
-                               Y_true,
+        self.syn = Synthesizer(X_val,
+                               Y_val,
                                n_classes=self.n_classes,
                                b=self.b,
                                n_jobs=self.n_jobs)
@@ -177,17 +205,20 @@ class HeuristicGenerator(object):
         #create appended L matrices for validation and train set
         beta_opt = self.syn.find_optimal_beta(self.hf, self.X_val,
                                               self.feat_combos, self.Y_val)
-        self.X_val = self.apply_heuristics(self.hf, self.X_val,
-                                           self.feat_combos, beta_opt)
-        self.X_train = self.apply_heuristics(self.hf, self.X_train,
+        self.L_val = self.apply_heuristics(self.hf,
+                                           self.X_val,
+                                           self.feat_combos,
+                                           beta_opt,
+                                           debug=False)
+        self.L_train = self.apply_heuristics(self.hf, self.X_train,
                                              self.feat_combos, beta_opt)
 
     def run_verifier(self):
         """ 
         Generates Verifier object and saves marginals
         """
-        self.vf = Verifier(self.X_train,
-                           self.X_val,
+        self.vf = Verifier(self.L_train,
+                           self.L_val,
                            self.Y_val,
                            self.n_classes,
                            has_snorkel=False)
@@ -216,26 +247,42 @@ class HeuristicGenerator(object):
         gamma_opt = self.gamma_optimizer(self.vf.val_marginals)
         #gamma_opt = self.gamma
         vague_idx = self.vf.find_vague_points(b=self.b, gamma=gamma_opt)
-        incorrect_idx = vague_idx
-        self.feedback_idx = list(
-            set(list(np.concatenate((vague_idx, incorrect_idx)))))
+        #  incorrect_idx = vague_idx
+
+        # @todo: no concatenation but union!
+        #  self.feedback_idx = list(set(list(np.concatenate(
+        #  (vague_idx)))))  #, incorrect_idx)))))
+        self.feedback_idx = list(vague_idx)
 
     def calculate_accuracy(self, marginals, b, Y_true):
+        #  hier werden marginals jetzt ohne b berechnet? bzw. nur die als abstain gezählt, die auch tatsächlich exackt b sind?
+        #  wie sieht das in der feedback bestimmung aus?
+
         Y_pred = np.argmax(marginals, axis=1)
         # abstain for labels where the prediction isn't clear
+        #  print("marginals", marginals)
         indices_with_abstain = np.where(np.amax(marginals, axis=1) == b)
-        for i in indices_with_abstain:
-            if len(i) == 0:
-                continue
+        #  print("indic_w_abst", list(indices_with_abstain))
+        for i in indices_with_abstain[0]:
+            #  print(i)
+            #  if len(i) == 0:
+            #  continue
             i = int(i)
             Y_pred[i] = Y_true[i]
         return accuracy_score(Y_true, Y_pred)
 
     def calculate_coverage(self, marginals, b, Y_true):
-        # coverage is defined as the amount of labeled datapoints / amount of total datapoints
-        amount_of_labeled = np.shape(
-            np.where(np.amax(marginals, axis=1) != b))[1]
-        return amount_of_labeled / marginals.shape[0]
+        #  print("marg", marginals)
+        #  print("b", b)
+
+        highest_probabilities = np.amax(marginals, axis=1)
+        Y_test = [-1 if prob == 0.5 else 1 for prob in highest_probabilities]
+        amount_of_labels_not_abstain = len(Y_test)
+        #  print("amount_of_labels_not_abstain", amount_of_labels_not_abstain)
+        total_labels = np.shape(Y_test)[0]
+        #  print("total_labels", total_labels)
+        #  print("\n")
+        return amount_of_labels_not_abstain / total_labels
 
     def evaluate(self):
         """ 
@@ -271,13 +318,13 @@ class HeuristicGenerator(object):
             except:
                 stats_table[i, 1] = -1.
             stats_table[i, 2] = self.calculate_accuracy(
-                self.X_val[:, i], self.b, self.Y_val)
+                self.L_val[:, i], self.b, self.Y_val)
             stats_table[i, 3] = self.calculate_accuracy(
-                self.X_train[:, i], self.b, self.Y_train)
+                self.L_train[:, i], self.b, self.Y_train)
             stats_table[i, 4] = self.calculate_coverage(
-                self.X_val[:, i], self.b, self.Y_val)
+                self.L_val[:, i], self.b, self.Y_val)
             stats_table[i, 5] = self.calculate_coverage(
-                self.X_train[:, i], self.b, self.Y_train)
+                self.L_train[:, i], self.b, self.Y_train)
 
         #Make table
         column_headers = [

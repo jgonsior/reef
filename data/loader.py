@@ -42,9 +42,10 @@ def parse_file(filename):
 def split_data(X, plots, y):
     np.random.seed(1234)
     num_sample = np.shape(X)[0]
-    if len(X) == 12:
+    if len(X) < 450:
         num_test = 1
     else:
+        #  print("ohoh" * 10000)
         num_test = 500
 
     X_test = X.iloc[0:num_test, :]
@@ -60,6 +61,7 @@ def split_data(X, plots, y):
     X_tr, X_te, y_tr, y_te, plots_tr, plots_te = train_test_split(
         X_train, y_train, plots_train, test_size=test_ratio)
 
+    #  print(X_te)
     return X_tr, X_te, X_test, \
         np.array(y_tr), np.array(y_te), np.array(y_test), plots_tr, plots_te, plots_test
 

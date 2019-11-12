@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import UndefinedMetricWarning
+from sklearn.metrics import f1_score
 
 from data.loader import DataLoader
 from deco_helper.functions import splitFeatures
@@ -59,7 +60,7 @@ if config.dataset_path != 'imdb' and config.dataset_path != 'imdb_small':
 elif config.dataset_path == 'imdb_small':
     dl = DataLoader()
     X_train, X_val, X_test, Y_train, Y_val, Y_test, _, _, _ = dl.load_data(
-        data_path='./data/imdb/budgetandactors2.txt')
+        data_path='../imdb_small/budgetandactors2.txt')
     Y_val = [1 if y == 1 else 0 for y in Y_val]
     Y_test = [1 if y == 1 else 0 for y in Y_test]
     n_classes = 2
@@ -72,6 +73,11 @@ else:
     Y_test = [1 if y == 1 else 0 for y in Y_test]
     n_classes = 2
 
+#  print("X_val", X_val)
+#  print("X_train", X_train)
+#  print("Y_val", Y_val)
+#  print("Y_train", Y_train)
+#  exit(-1)
 validation_accuracy = []
 training_accuracy = []
 validation_coverage = []
@@ -95,6 +101,7 @@ for i in range(3, 26):
     if i == 3:
         hg.run_synthesizer(max_cardinality=1, idx=idx, keep=3, model='dt')
     else:
+        #  exit(-1)
         hg.run_synthesizer(max_cardinality=1, idx=idx, keep=1, model='dt')
     hg.run_verifier()
 
@@ -105,6 +112,12 @@ for i in range(3, 26):
     training_marginals.append(hg.vf.train_marginals)
     validation_coverage.append(vc)
     training_coverage.append(tc)
+    #  print("train_marginals", hg.vf.train_marginals)
+    #  print("val_marginals", hg.vf.val_marginals)
+    print("va", va)
+    print("ta", ta)
+    print("vc", vc)
+    print("tc", tc)
 
     #Plot Training Set Label Distribution
     if i <= 8:
@@ -133,9 +146,19 @@ plt.hist(training_marginals[-1], bins=10, range=(0.0, 1.0))
 plt.title('Final Distribution')
 #  plt.show()
 print("final marginals", training_marginals)
+print("final y_predicted", np.argmax(training_marginals[-1], axis=1))
 print("Program Synthesis Train Accuracy: ", training_accuracy)
 print("Program Synthesis Train Coverage: ", training_coverage)
 print("Program Synthesis Validation Accuracy: ", validation_accuracy)
+
+# calculate f1 score for train dataset based on last marginals!
+L_train_final = np.argmax(training_marginals[-1], axis=1)
+print("Final f1-score train (micro)",
+      f1_score(Y_train, L_train_final, average='micro'))
+print("Final f1-score train (macro)",
+      f1_score(Y_train, L_train_final, average='macro'))
+print("Final f1-score train (None)",
+      f1_score(Y_train, L_train_final, average=None))
 
 # ### Save Training Set Labels
 # We save the training set labels Reef generates that we use in the next notebook to train a simple LSTM model.
@@ -144,3 +167,4 @@ print("Program Synthesis Validation Accuracy: ", validation_accuracy)
 
 filepath = './data/'
 np.save(filepath + '_reef.npy', training_marginals[-1])
+print("done")
