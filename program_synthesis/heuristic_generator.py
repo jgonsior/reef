@@ -276,12 +276,14 @@ class HeuristicGenerator(object):
         #  print("b", b)
 
         highest_probabilities = np.amax(marginals, axis=1)
-        Y_test = [-1 if prob == 0.5 else 1 for prob in highest_probabilities]
-        amount_of_labels_not_abstain = len(Y_test)
+        #  print("high", highest_probabilities)
+        total_labels = np.shape(highest_probabilities)[0]
+        amount_of_labels_not_abstain = total_labels - (
+            highest_probabilities == b).sum()
         #  print("amount_of_labels_not_abstain", amount_of_labels_not_abstain)
-        total_labels = np.shape(Y_test)[0]
         #  print("total_labels", total_labels)
         #  print("\n")
+
         return amount_of_labels_not_abstain / total_labels
 
     def evaluate(self):
@@ -299,6 +301,7 @@ class HeuristicGenerator(object):
                                                       self.b, self.Y_train)
         self.val_coverage = self.calculate_coverage(self.val_marginals, self.b,
                                                     self.Y_val)
+        #  exit(-1)
         self.train_coverage = self.calculate_coverage(self.train_marginals,
                                                       self.b, self.Y_train)
 
